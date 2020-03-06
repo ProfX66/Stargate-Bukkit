@@ -1,44 +1,47 @@
 package net.TheDgtl.Stargate;
 
+import org.bukkit.Axis;
+import org.bukkit.Material;
+
 public class BloxPopulator {
 	private Blox blox;
-	private int nextMat;
-	private byte nextData;
+	private Material nextMat;
+	private Axis nextAxis;
 	
-	public BloxPopulator(Blox b, int m) {
+	public BloxPopulator(Blox b, Material m) {
 		blox = b;
 		nextMat = m;
-		nextData = 0;
+		nextAxis = null;
 	}
 	
-	public BloxPopulator(Blox b, int m, byte d) {
+	public BloxPopulator(Blox b, Material m, Axis a) {
 		blox = b;
 		nextMat = m;
-		nextData = d;
+		nextAxis = a;
 	}
 	
 	public void setBlox(Blox b) {
 		blox = b;
 	}
 	
-	public void setMat(int m) {
+	public void setMat(Material m) {
 		nextMat = m;
 	}
 	
-	public void setData(byte d) {
-		nextData = d;
+	public void setAxis(Axis a) {
+		nextAxis = a;
 	}
 	
 	public Blox getBlox() {
 		return blox;
 	}
 	
-	public int getMat() {
+	public Material getMat() {
 		return nextMat;
 	}
 	
-	public byte getData() {
-		return nextData;
+	public Axis getAxis() {
+		return nextAxis;
 	}
 	
 }

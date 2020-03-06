@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="Stargate" default="makejar" basedir=".">
+	<property name="version.number" value="0.9.0.6" />
+	<delete file="plugin.yml"/>
+	<copy file="plugin_master.yml" tofile="plugin.yml"/>
+	<replace file="plugin.yml" token="BUILD_VERSION" value="${version.number}" />
+    <target name="makejar" description="Create a jar for the project">
+        <mkdir dir="target"></mkdir>
+        <jar destfile="target/${ant.project.name}-v${version.number}.jar">
+            <fileset dir="bin"></fileset>
+            <fileset file="plugin.yml"></fileset>
+        	<fileset file="config.yml"></fileset>
+        </jar>
+    </target>
+</project>

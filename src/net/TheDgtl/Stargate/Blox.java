@@ -4,6 +4,9 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
+import org.bukkit.block.data.type.Sign;
+import org.bukkit.block.data.type.WallSign;
 
 /**
  * Stargate - A portal plugin for Bukkit
@@ -77,20 +80,12 @@ public class Blox {
 		return makeRelativeLoc(0.5 + -right * modX + distance * modZ, depth, 0.5 + -right * modZ + -distance * modX, rotX, 0);
 	}
 
-	public void setType(int type) {
-		world.getBlockAt(x, y, z).setTypeId(type);
+	public void setType(Material type) {
+		world.getBlockAt(x, y, z).setType(type);
 	}
 
-	public int getType() {
-		return world.getBlockAt(x, y, z).getTypeId();
-	}
-
-	public void setData(int data) {
-		world.getBlockAt(x, y, z).setData((byte)data);
-	}
-
-	public int getData() {
-		return world.getBlockAt(x, y, z).getData();
+	public Material getType() {
+		return world.getBlockAt(x, y, z).getType();
 	}
 
 	public Block getBlock() {
@@ -124,17 +119,12 @@ public class Blox {
 		int offsetY = 0;
 		int offsetZ = 0;
 		
-		if (getBlock().getType() == Material.WALL_SIGN) {
-			if (getData() == 0x2) {
-				offsetZ = 1;
-			} else if (getData() == 0x3) {
-				offsetZ = -1;
-			} else if (getData() == 0x4) {
-				offsetX = 1;
-			} else if (getData() == 0x5) {
-				offsetX = -1;
-			}
-		} else if (getBlock().getType() == Material.SIGN_POST) {
+		if (getBlock().getBlockData() instanceof WallSign) {
+			Stargate.debug("findParent", "Found wallsign");
+			BlockFace facing = ((WallSign) getBlock().getBlockData()).getFacing().getOppositeFace();
+			offsetX = facing.getModX();
+			offsetZ = facing.getModZ();
+		} else if (getBlock().getBlockData() instanceof Sign) {
 			offsetY = -1;
 		} else {
 			return;

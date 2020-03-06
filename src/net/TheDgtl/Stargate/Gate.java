@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Scanner;
 import java.util.logging.Level;
 
@@ -35,62 +36,60 @@ import org.bukkit.block.Block;
  */
  
 public class Gate {
-	public static final int ANYTHING = -1;
-	public static final int ENTRANCE = -2;
-	public static final int CONTROL = -3;
-	public static final int EXIT = -4;
-	private static HashMap<String, Gate> gates = new HashMap<String, Gate>();
-	private static HashMap<Integer, ArrayList<Gate>> controlBlocks = new HashMap<Integer, ArrayList<Gate>>();
-	private static HashSet<Integer> frameBlocks = new HashSet<Integer>();
+	private static final Character ANYTHING = ' ';
+	private static final Character ENTRANCE = '.';
+	private static final Character EXIT = '*';
+	private static HashMap<String, Gate> gates = new HashMap<>();
+	private static HashMap<Material, ArrayList<Gate>> controlBlocks = new HashMap<>();
+	private static HashSet<Material> frameBlocks = new HashSet<>();
 
 	private String filename;
 	private Character[][] layout;
-	private HashMap<Character, Integer> types;
-	private HashMap<Character, Integer> metadata;
+	private HashMap<Character, Material> types;
 	private RelativeBlockVector[] entrances = new RelativeBlockVector[0];
 	private RelativeBlockVector[] border = new RelativeBlockVector[0];
 	private RelativeBlockVector[] controls = new RelativeBlockVector[0];
 	private RelativeBlockVector exitBlock = null;
-	private HashMap<RelativeBlockVector, Integer> exits = new HashMap<RelativeBlockVector, Integer>();
-	private int portalBlockOpen = Material.PORTAL.getId();
-	private int portalBlockClosed = Material.AIR.getId();
+	private HashMap<RelativeBlockVector, Integer> exits = new HashMap<>();
+	private Material portalBlockOpen = Material.NETHER_PORTAL;
+	private Material portalBlockClosed = Material.AIR;
 	
-	// iConomy information
+	// Economy information
 	private int useCost = -1;
 	private int createCost = -1;
 	private int destroyCost = -1;
 	private boolean toOwner = false;
 
-	public Gate(String filename, Character[][] layout, HashMap<Character, Integer> types, HashMap<Character, Integer> metadata) {
+	public Gate(String filename, Character[][] layout, HashMap<Character, Material> types) {
 		this.filename = filename;
 		this.layout = layout;
-		this.metadata = metadata;
 		this.types = types;
 
 		populateCoordinates();
 	}
 
 	private void populateCoordinates() {
-		ArrayList<RelativeBlockVector> entranceList = new ArrayList<RelativeBlockVector>();
-		ArrayList<RelativeBlockVector> borderList = new ArrayList<RelativeBlockVector>();
-		ArrayList<RelativeBlockVector> controlList = new ArrayList<RelativeBlockVector>();
+		ArrayList<RelativeBlockVector> entranceList = new ArrayList<>();
+		ArrayList<RelativeBlockVector> borderList = new ArrayList<>();
+		ArrayList<RelativeBlockVector> controlList = new ArrayList<>();
 		RelativeBlockVector[] relativeExits = new RelativeBlockVector[layout[0].length];
 		int[] exitDepths = new int[layout[0].length];
 		RelativeBlockVector lastExit = null;
 
 		for (int y = 0; y < layout.length; y++) {
 			for (int x = 0; x < layout[y].length; x++) {
-				Integer id = types.get(layout[y][x]);
-				if (layout[y][x] == '-') {
+				Character key = layout[y][x];
+				if (key.equals('-')) {
 					controlList.add(new RelativeBlockVector(x, y, 0));
 				}
 
-				if (id == ENTRANCE || id == EXIT) {
+				if (key.equals(ENTRANCE) || key.equals(EXIT)) {
 					entranceList.add(new RelativeBlockVector(x, y, 0));
 					exitDepths[x] = y;
-					if (id == EXIT)
+					if (key.equals(EXIT)) {
 						this.exitBlock = new RelativeBlockVector(x, y, 0);
-				} else if (id != ANYTHING) {
+					}
+				} else if (!key.equals(ANYTHING)) {
 					borderList.add(new RelativeBlockVector(x, y, 0));
 				}
 			}
@@ -119,8 +118,8 @@ public class Gate {
 		try {
 			BufferedWriter bw = new BufferedWriter(new FileWriter(gateFolder + filename));
 			
-			writeConfig(bw, "portal-open", portalBlockOpen);
-			writeConfig(bw, "portal-closed", portalBlockClosed);
+			writeConfig(bw, "portal-open", portalBlockOpen.name());
+			writeConfig(bw, "portal-closed", portalBlockClosed.name());
 			if (useCost != -1)
 				writeConfig(bw, "usecost", useCost);
 			if (createCost != -1)
@@ -129,28 +128,26 @@ public class Gate {
 				writeConfig(bw, "destroycost", destroyCost);
 			writeConfig(bw, "toowner", toOwner);
 
-			for (Character type : types.keySet()) {
-				Integer value = types.get(type);
+			for (Map.Entry<Character, Material> entry : types.entrySet()) {
+				Character type = entry.getKey();
+				Material value = entry.getValue();
 				// Skip control values
-				if (value < 0) continue;
+				if (type.equals(ANYTHING) || type.equals(ENTRANCE) || type.equals(EXIT)) {
+					continue;
+				}
 
 				bw.append(type);
 				bw.append('=');
-				bw.append(value.toString());
-				Integer mData = metadata.get(type);
-				// Append metadata
-				if (mData != null) {
-					bw.append(':');
-					bw.append(mData.toString());
+				if(value != null) {
+					bw.append(value.toString());
 				}
 				bw.newLine();
 			}
 
 			bw.newLine();
 
-			for (int y = 0; y < layout.length; y++) {
-				for (int x = 0; x < layout[y].length; x++) {
-					Character symbol = layout[y][x];
+			for(Character[] aLayout : layout) {
+				for(Character symbol : aLayout) {
 					bw.append(symbol);
 				}
 				bw.newLine();
@@ -172,16 +169,17 @@ public class Gate {
 		bw.newLine();
 	}
 
+	private void writeConfig(BufferedWriter bw, String key, String value) throws IOException {
+		bw.append(String.format("%s=%s", key, value));
+		bw.newLine();
+	}
+
 	public Character[][] getLayout() {
 		return layout;
 	}
 	
-	public HashMap<Character, Integer> getTypes() {
+	public HashMap<Character, Material> getTypes() {
 		return types;
-	}
-	
-	public HashMap<Character, Integer> getMetaData() {
-		return metadata;
 	}
 
 	public RelativeBlockVector[] getEntrances() {
@@ -203,7 +201,7 @@ public class Gate {
 		return exitBlock;
 	}
 
-	public int getControlBlock() {
+	public Material getControlBlock() {
 		return types.get('-');
 	}
 
@@ -211,34 +209,34 @@ public class Gate {
 		return filename;
 	}
 
-	public int getPortalBlockOpen() {
+	public Material getPortalBlockOpen() {
 		return portalBlockOpen;
 	}
 	
-	public void setPortalBlockOpen(int type) {
+	public void setPortalBlockOpen(Material type) {
 		portalBlockOpen = type;
 	}
 
-	public int getPortalBlockClosed() {
+	public Material getPortalBlockClosed() {
 		return portalBlockClosed;
 	}
 	
-	public void setPortalBlockClosed(int type) {
+	public void setPortalBlockClosed(Material type) {
 		portalBlockClosed = type;
 	}
 	
 	public int getUseCost() {
-		if (useCost < 0) return iConomyHandler.useCost;
+		if (useCost < 0) return EconomyHandler.useCost;
 		return useCost;
 	}
 	
 	public Integer getCreateCost() {
-		if (createCost < 0) return iConomyHandler.createCost;
+		if (createCost < 0) return EconomyHandler.createCost;
 		return createCost;
 	}
 	
 	public Integer getDestroyCost() {
-		if (destroyCost < 0) return iConomyHandler.destroyCost;
+		if (destroyCost < 0) return EconomyHandler.destroyCost;
 		return destroyCost;
 	}
 	
@@ -251,45 +249,31 @@ public class Gate {
 	}
 
 	public boolean matches(Blox topleft, int modX, int modZ, boolean onCreate) {
+		HashMap<Character, Material> portalTypes = new HashMap<>(types);
 		for (int y = 0; y < layout.length; y++) {
 			for (int x = 0; x < layout[y].length; x++) {
-				int id = types.get(layout[y][x]);
+				Character key = layout[y][x];
 
-				if (id == ENTRANCE || id == EXIT) {
-					// TODO: Remove once snowmanTrailEvent is added
+				if (key.equals(ENTRANCE) || key.equals(EXIT)) {
 					if (Stargate.ignoreEntrance) continue;
-					
-					int type = topleft.modRelative(x, y, 0, modX, 1, modZ).getType();
+
+					Material type = topleft.modRelative(x, y, 0, modX, 1, modZ).getType();
 					
 					// Ignore entrance if it's air and we're creating a new gate
-					if (onCreate && type == Material.AIR.getId()) continue;
+					if (onCreate && type == Material.AIR) continue;
 					
 					if (type != portalBlockClosed && type != portalBlockOpen) {
-						// Special case for water gates
-						if (portalBlockOpen == Material.WATER.getId() || portalBlockOpen == Material.STATIONARY_WATER.getId()) {
-							if (type == Material.WATER.getId() || type == Material.STATIONARY_WATER.getId()) {
-								continue;
-							}
-						}
-						// Special case for lava gates
-						if (portalBlockOpen == Material.LAVA.getId() || portalBlockOpen == Material.STATIONARY_LAVA.getId()) {
-							if (type == Material.LAVA.getId() || type == Material.STATIONARY_LAVA.getId()) {
-								continue;
-							}
-						}
 						Stargate.debug("Gate::Matches", "Entrance/Exit Material Mismatch: " + type);
 						return false;
 					}
-				} else if (id != ANYTHING) {
-					 if (topleft.modRelative(x, y, 0, modX, 1, modZ).getType() != id) {
-						 Stargate.debug("Gate::Matches", "Block Type Mismatch: " + topleft.modRelative(x, y, 0, modX, 1, modZ).getType() + " != " + id);
-						 return false;
-					 }
-					 Integer mData = metadata.get(layout[y][x]);
-					 if (mData != null && topleft.modRelative(x, y, 0, modX, 1, modZ).getData() != mData) {
-						 Stargate.debug("Gate::Matches", "Block Data Mismatch: " + topleft.modRelative(x, y, 0, modX, 1, modZ).getData() + " != " + mData);
-						 return false;
-					 }
+				} else if (!key.equals(ANYTHING)) {
+					Material id = portalTypes.get(key);
+					if(id == null) {
+						portalTypes.put(key, topleft.modRelative(x, y, 0, modX, 1, modZ).getType());
+					} else if(topleft.modRelative(x, y, 0, modX, 1, modZ).getType() != id) {
+						Stargate.debug("Gate::Matches", "Block Type Mismatch: " + topleft.modRelative(x, y, 0, modX, 1, modZ).getType() + " != " + id);
+						return false;
+					}
 				}
 			}
 		}
@@ -300,10 +284,10 @@ public class Gate {
 	public static void registerGate(Gate gate) {
 		gates.put(gate.getFilename(), gate);
 
-		int blockID = gate.getControlBlock();
+		Material blockID = gate.getControlBlock();
 
 		if (!controlBlocks.containsKey(blockID)) {
-			controlBlocks.put(blockID, new ArrayList<Gate>());
+			controlBlocks.put(blockID, new ArrayList<>());
 		}
 
 		controlBlocks.get(blockID).add(gate);
@@ -312,17 +296,16 @@ public class Gate {
 	public static Gate loadGate(File file) {
 		Scanner scanner = null;
 		boolean designing = false;
-		ArrayList<ArrayList<Character>> design = new ArrayList<ArrayList<Character>>();
-		HashMap<Character, Integer> types = new HashMap<Character, Integer>();
-		HashMap<Character, Integer> metadata = new HashMap<Character, Integer>();
-		HashMap<String, String> config = new HashMap<String, String>();
-		HashSet<Integer> frameTypes = new HashSet<Integer>();
+		ArrayList<ArrayList<Character>> design = new ArrayList<>();
+		HashMap<Character, Material> types = new HashMap<>();
+		HashMap<String, String> config = new HashMap<>();
+		HashSet<Material> frameTypes = new HashSet<>();
 		int cols = 0;
 		
 		// Init types map
-		types.put('.', ENTRANCE);
-		types.put('*', EXIT);
-		types.put(' ', ANYTHING);
+		types.put(ENTRANCE, Material.AIR);
+		types.put(EXIT, Material.AIR);
+		types.put(ANYTHING, Material.AIR);
 
 		try {
 			scanner = new Scanner(file);
@@ -331,7 +314,7 @@ public class Gate {
 				String line = scanner.nextLine();
 
 				if (designing) {
-					ArrayList<Character> row = new ArrayList<Character>();
+					ArrayList<Character> row = new ArrayList<>();
 
 					if (line.length() > cols) {
 						cols = line.length();
@@ -356,15 +339,7 @@ public class Gate {
 
 						if (key.length() == 1) {
 							Character symbol = key.charAt(0);
-							// Check for metadata
-							if (value.contains(":")) {
-								split = value.split(":");
-								value = split[0].trim();
-								String mData = split[1].trim();
-								metadata.put(symbol, Integer.parseInt(mData));
-							}
-							Integer id = Integer.parseInt(value);
-
+							Material id = Material.getMaterial(value);
 							types.put(symbol, id);
 							frameTypes.add(id);
 						} else {
@@ -397,14 +372,14 @@ public class Gate {
 			layout[y] = result;
 		}
 
-		Gate gate = new Gate(file.getName(), layout, types, metadata);
+		Gate gate = new Gate(file.getName(), layout, types);
 
 		gate.portalBlockOpen = readConfig(config, gate, file, "portal-open", gate.portalBlockOpen);
 		gate.portalBlockClosed = readConfig(config, gate, file, "portal-closed", gate.portalBlockClosed);
 		gate.useCost = readConfig(config, gate, file, "usecost", -1);
 		gate.destroyCost = readConfig(config, gate, file, "destroycost", -1);
 		gate.createCost = readConfig(config, gate, file, "createcost", -1);
-		gate.toOwner = (config.containsKey("toowner") ? Boolean.valueOf(config.get("toowner")) : iConomyHandler.toOwner);
+		gate.toOwner = (config.containsKey("toowner") ? Boolean.valueOf(config.get("toowner")) : EconomyHandler.toOwner);
 
 		if (gate.getControls().length != 2) {
 			Stargate.log.log(Level.SEVERE, "Could not load Gate " + file.getName() + " - Gates must have exactly 2 control points.");
@@ -430,6 +405,17 @@ public class Gate {
 		return def;
 	}
 
+	private static Material readConfig(HashMap<String, String> config, Gate gate, File file, String key, Material def) {
+		if (config.containsKey(key)) {
+			Material mat = Material.getMaterial(config.get(key));
+			if(mat != null) {
+				return mat;
+			}
+			Stargate.log.log(Level.WARNING, String.format("Error reading %s: %s is not a material", file, key));
+		}
+		return def;
+	}
+
 	public static void loadGates(String gateFolder) {
 		File dir = new File(gateFolder);
 		File[] files;
@@ -440,9 +426,10 @@ public class Gate {
 			files = new File[0];
 		}
 
-		if (files.length == 0) {
-			dir.mkdir();
-			populateDefaults(gateFolder);
+		if (files == null || files.length == 0) {
+			if (dir.mkdir()) {
+				populateDefaults(gateFolder);
+			}
 		} else {
 			for (File file : files) {
 				Gate gate = loadGate(file);
@@ -452,7 +439,6 @@ public class Gate {
 	}
 	
 	public static void populateDefaults(String gateFolder) {
-		int Obsidian = Material.OBSIDIAN.getId();
 		Character[][] layout = new Character[][] {
 			{' ', 'X','X', ' '},
 			{'X', '.', '.', 'X'},
@@ -460,24 +446,23 @@ public class Gate {
 			{'X', '*', '.', 'X'},
 			{' ', 'X', 'X', ' '},
 		};
-		HashMap<Character, Integer> types = new HashMap<Character, Integer>();
-		types.put('.', ENTRANCE);
-		types.put('*', EXIT);
-		types.put(' ', ANYTHING);
-		types.put('X', Obsidian);
-		types.put('-', Obsidian);
-		HashMap<Character, Integer> metadata = new HashMap<Character, Integer>();
+		HashMap<Character, Material> types = new HashMap<>();
+		types.put(ENTRANCE, Material.AIR);
+		types.put(EXIT, Material.AIR);
+		types.put(ANYTHING, Material.AIR);
+		types.put('X', Material.OBSIDIAN);
+		types.put('-', Material.OBSIDIAN);
 
-		Gate gate = new Gate("nethergate.gate", layout, types, metadata);
+		Gate gate = new Gate("nethergate.gate", layout, types);
 		gate.save(gateFolder);
 		registerGate(gate);
 	}
 
 	public static Gate[] getGatesByControlBlock(Block block) {
-		return getGatesByControlBlock(block.getTypeId());
+		return getGatesByControlBlock(block.getType());
 	}
 
-	public static Gate[] getGatesByControlBlock(int type) {
+	public static Gate[] getGatesByControlBlock(Material type) {
 		Gate[] result = new Gate[0];
 		ArrayList<Gate> lookup = controlBlocks.get(type);
 		
@@ -494,7 +479,7 @@ public class Gate {
 		return gates.size();
 	}
 	
-	public static boolean isGateBlock(int type) {
+	public static boolean isGateBlock(Material type) {
 		return frameBlocks.contains(type);
 	}
 	
@@ -505,8 +490,8 @@ public class Gate {
 	}
 	
 	public static void clearGates() {
-    	gates.clear();
-    	controlBlocks.clear();
-    	frameBlocks.clear();
+		gates.clear();
+		controlBlocks.clear();
+		frameBlocks.clear();
 	}
 }
