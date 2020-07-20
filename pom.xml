@@ -5,7 +5,7 @@
 
     <groupId>net.TheDgtl.Stargate</groupId>
     <artifactId>Stargate</artifactId>
-    <version>0.9.0.6</version>
+    <version>0.9.0.7</version>
 
     <name>Stargate</name>
     <url>https://github.com/ProfX66/Stargate-Bukkit</url>
@@ -35,6 +35,12 @@
             <scope>provided</scope>
             <version>1.7.3</version>
         </dependency>
+        <dependency>
+            <groupId>us.dynmap</groupId>
+            <artifactId>DynmapCoreAPI</artifactId>
+            <scope>provided</scope>
+            <version>2.6-beta-1</version>
+        </dependency>
     </dependencies>
     <repositories>
         <repository>
@@ -55,6 +61,7 @@
                     <include>plugin.yml</include>
                     <include>plugin_master.yml</include>
                     <include>config.yml</include>
+                    <include>stargate-icon.png</include>
                 </includes>
             </resource>
         </resources>

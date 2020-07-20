@@ -1,6 +1,10 @@
 package net.TheDgtl.Stargate;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.InputStream;
+import java.net.URL;
 import java.util.Dictionary;
 import java.util.HashMap;
 import java.util.Hashtable;
@@ -31,6 +35,10 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.dynmap.DynmapCommonAPI;
+import org.dynmap.markers.MarkerAPI;
+import org.dynmap.markers.MarkerIcon;
+import org.dynmap.markers.MarkerSet;
 
 /**
  * Stargate - A portal plugin for Bukkit
@@ -60,8 +68,11 @@ public class Stargate extends JavaPlugin {
 	public static Server server;
 	public static Stargate stargate;
 	private static LangLoader lang;
+	private static DynmapCommonAPI dynmapAPI;
+	private static MarkerSet dynmapMarkers;
+	private static MarkerIcon dynmapStargateIcon;
 
-    private static Stargate instance;
+	private static Stargate instance;
 
 	private static String portalFolder;
 	private static String gateFolder;
@@ -112,7 +123,31 @@ public class Stargate extends JavaPlugin {
 		Stargate.server = getServer();
 		Stargate.stargate = this;
         instance = this;
-        
+
+        dynmapAPI = (DynmapCommonAPI) pm.getPlugin("dynmap");
+        if (dynmapAPI != null) {
+			MarkerAPI markerAPI = dynmapAPI.getMarkerAPI();
+
+			dynmapMarkers = markerAPI.getMarkerSet("portals");
+			if (dynmapMarkers == null) {
+				dynmapMarkers = markerAPI.createMarkerSet("portals", "Stargates", null, false);
+			}
+
+			InputStream iconFile = getResource("stargate-icon.png");
+			if (iconFile != null) {
+				dynmapStargateIcon = markerAPI.getMarkerIcon("stargate");
+				if (dynmapStargateIcon == null) {
+					dynmapStargateIcon = markerAPI.createMarkerIcon("stargate", "Stargate", iconFile);
+				}
+
+				if (dynmapStargateIcon == null) {
+					log.warning("[Stargate] Failed to create dynmap icon");
+				}
+			} else {
+				log.warning("[Stargate] Failed to load stargate-icon.png for dynmap integration");
+			}
+		}
+
 		// Set portalFile and gateFolder to the plugin folder as defaults.
 		portalFolder = getDataFolder().getPath() + "/portals/";
 		gateFolder = getDataFolder().getPath() + "/gates/";
@@ -264,6 +299,10 @@ public class Stargate extends JavaPlugin {
 		return defNetwork;
 	}
 
+	public static MarkerSet getDynmapMarkers() { return dynmapMarkers; }
+
+	public static MarkerIcon getDynmapStargateIcon() { return dynmapStargateIcon; }
+
 	public static String getString(String name) {
 		Map<String, String> messages = new HashMap<String, String>();
 		messages.put("prefix", "[Stargate] ");
@@ -294,6 +333,7 @@ public class Stargate extends JavaPlugin {
 		messages.put("bungeeDeny", "You do not have permission to create BungeeCord gates.");
 		messages.put("bungeeEmpty", "BungeeCord gates require both a destination and network.");
 		messages.put("bungeeSign", "Teleport to");
+		messages.put("dynmapLabel", "%name% (%owner%)");
 		
 		String val = "";
 		if (messages.get(name) != null) val = messages.get(name);
