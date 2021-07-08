@@ -39,6 +39,9 @@ import org.bukkit.event.block.SignChangeEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.material.Step;
 import org.bukkit.util.Vector;
+import org.dynmap.markers.Marker;
+import org.dynmap.markers.MarkerAPI;
+import org.dynmap.markers.MarkerSet;
 
 /**
  * Stargate - A portal plugin for Bukkit
@@ -849,6 +852,14 @@ public class Portal {
 		}
 
 		saveAllGates(getWorld());
+
+		MarkerSet markerSet = Stargate.getDynmapMarkers();
+		if (markerSet != null) {
+			Marker marker = markerSet.findMarker(getDynmapID());
+			if (marker != null) {
+				marker.deleteMarker();
+			}
+		}
 	}
 
 	private Blox getBlockAt(RelativeBlockVector vector) {
@@ -895,6 +906,28 @@ public class Portal {
 		}
 
 		allPortals.add(this);
+
+		MarkerSet markerSet = Stargate.getDynmapMarkers();
+		if (markerSet != null && getNetwork().equals(Stargate.getDefaultNetwork())) {
+			String label = Stargate.replaceVars(
+					Stargate.getString("dynmapLabel"),
+					new String[] {"%name%", "%owner%"},
+					new String[] {getName(), getOwner()});
+
+			Stargate.getDynmapMarkers().createMarker(
+					getDynmapID(),
+					label,
+					world.getName(),
+					id.getX(),
+					id.getY(),
+					id.getZ(),
+					Stargate.getDynmapStargateIcon(),
+					false);
+		}
+	}
+
+	private String getDynmapID() {
+		return String.format("portal@%d,%d,%d", id.getX(), id.getY(), id.getZ());
 	}
 
 	public static Portal createPortal(SignChangeEvent event, Player player) {

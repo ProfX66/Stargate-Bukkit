@@ -9,6 +9,7 @@ commands:
   sg:
     description: Used to reload the plugin. Console use only.
     usage: /<command> reload - Used to reload the plugin. Console use only.
+softdepend: [dynmap]
 permissions:
   stargate.use:
     description: Allow use of all gates linking to any world in any network
